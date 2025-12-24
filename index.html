@@ -58,12 +58,12 @@
     <script>
         const hardcodedConfig = {
             //把以下六行有demo的設定值取代為申請好的firebase設定值即可
-  apiKey: "AIzaSyB3VBGHvCanRIh3GcOOoWu2avkG2onMG68",
-  authDomain: "whiteboard-d1d11.firebaseapp.com",
-  projectId: "whiteboard-d1d11",
-  storageBucket: "whiteboard-d1d11.firebasestorage.app",
-  messagingSenderId: "258616814333",
-  appId: "1:258616814333:web:19b0b900c1a74b8e76ac94"
+  apiKey: "AIzaSyC2uPMXlHHldKpeb0br8jY5dOadQLGmHfc",
+  authDomain: "handwrite-c39fe.firebaseapp.com",
+  projectId: "handwrite-c39fe",
+  storageBucket: "handwrite-c39fe.firebasestorage.app",
+  messagingSenderId: "728494695338",
+  appId: "1:728494695338:web:6dafc09c224f8d01c541d3"
         }; 
         
         let db = null;
@@ -90,6 +90,12 @@
         let replaySpeed = 1;
         let confirmationCallback = null;
         let teacherSessionUnsubscribe = null; // 用於監聽班級列表
+
+        // 背景圖相關變數
+        let backgroundImageData = null; // 學生端儲存的背景圖資料
+        let backgroundImageOpacity = 0.5; // 學生端儲存的背景圖透明度
+        let backgroundImageObj = null; // 緩存的Image對象
+        let isBackgroundImageLoaded = false; // 背景圖是否已載入
     </script>
 
     <!-- Firebase SDKs -->
@@ -125,6 +131,7 @@
 
         <div class="absolute bottom-6 text-center w-full px-4 text-xs text-gray-400">
             Made by <a href="https://kentxchang.blogspot.tw" target="_blank" class="text-orange-600 hover:text-orange-700 underline">阿剛老師</a>
+            <p class="mt-1">本作品依據 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh_TW" target="_blank" class="text-blue-600 hover:text-blue-700 underline">創用 CC 姓名標示-非商業性-相同方式分享 4.0 國際</a> 授權條款釋出。</p>
         </div>
     </div>
 
@@ -132,7 +139,7 @@
     <div id="page-teacher-login" class="hidden flex-1 flex flex-col items-center justify-center p-4 w-full max-w-md mx-auto">
         <div class="bg-white p-8 rounded-3xl shadow-xl w-full text-center">
             <h2 class="text-2xl font-bold text-gray-700 mb-6">教師驗證</h2>
-            <input type="password" id="teacher-pwd" placeholder="請輸入密碼" 
+            <input type="password" id="teacher-pwd" placeholder="請輸入密碼 (tpet)" 
                    class="w-full bg-gray-100 border-2 border-gray-200 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:border-orange-400 text-center text-lg">
             <div class="flex space-x-2">
                 <button onclick="goHome()" class="flex-1 py-3 rounded-xl bg-gray-200 text-gray-600 font-bold">返回</button>
@@ -244,6 +251,7 @@
                 </button>
             </div>
             <div class="flex items-center space-x-2">
+                 <button id="btn-background-image" onclick="openBackgroundImageModal()" class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm hover:bg-purple-600 flex items-center"><i class="fa-solid fa-image mr-1"></i> 背景圖</button>
                  <button id="btn-download-all" onclick="downloadAllSubmissions()" class="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-600 flex items-center"><i class="fa-solid fa-download mr-1"></i> 下載</button>
                  <button id="btn-toggle-class" onclick="toggleSession()" class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm"><i class="fa-solid fa-play"></i> 開始</button>
                  <button id="btn-end-class" onclick="clearCurrentClassData()" class="bg-gray-400 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-500 flex items-center"><i class="fa-solid fa-trash mr-1"></i> 清除</button>
@@ -380,6 +388,41 @@
         </div>
     </div>
     
+    <!-- 模態視窗:背景圖設定 -->
+    <div id="modal-background-image" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl modal-enter p-6">
+            <h3 class="text-xl font-bold mb-4 text-purple-600 flex items-center">
+                <i class="fa-solid fa-image mr-2"></i> 學生畫布第一頁背景圖設定
+            </h3>
+
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">上傳圖片</label>
+                <input type="file" id="background-image-input" accept="image/*" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-400 text-sm">
+                <p class="text-xs text-gray-400 mt-1">建議使用適合畫布尺寸的圖片，或使用 <kbd class="px-1 py-0.5 bg-gray-200 rounded text-xs">Ctrl+V</kbd> 貼上圖片</p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">
+                    透明度: <span id="opacity-value" class="text-purple-600">50%</span>
+                </label>
+                <input type="range" id="background-opacity-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <div id="background-preview-container" class="mb-4 hidden">
+                <label class="block text-sm font-bold text-gray-700 mb-2">預覽</label>
+                <div class="border-2 border-gray-200 rounded-xl p-2 bg-gray-50 flex items-center justify-center" style="min-height: 200px;">
+                    <img id="background-preview-img" src="" alt="預覽" class="max-w-full max-h-64 object-contain">
+                </div>
+            </div>
+
+            <div class="flex space-x-2">
+                <button onclick="removeBackgroundImage()" class="px-4 py-2 rounded-xl text-red-500 hover:bg-red-50 border border-red-200 font-bold text-sm">移除背景</button>
+                <button onclick="closeBackgroundImageModal()" class="flex-1 px-4 py-2 rounded-xl text-gray-500 hover:bg-gray-100 border border-gray-200">取消</button>
+                <button onclick="saveBackgroundImage()" class="flex-1 px-6 py-2 rounded-xl bg-purple-500 text-white font-bold shadow-md hover:bg-purple-600">儲存</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Generic Action Modal -->
     <div id="modal-action" class="fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl modal-enter p-6 text-center">
@@ -626,7 +669,7 @@
               .collection('class_controls').doc(currentClassCode)
               .onSnapshot(doc => {
                   const data = doc.exists ? doc.data() : { isActive: false };
-                  
+
                   const waiting = document.getElementById('student-waiting');
                   if (data.isActive) {
                       waiting.classList.add('hidden');
@@ -643,6 +686,34 @@
                            resetLocalCanvas();
                       }
                       lastResetTrigger = data.resetTrigger;
+                  }
+
+                  // 處理背景圖設定
+                  if (data.backgroundImage) {
+                      // 如果背景圖改變了,重新載入
+                      if (backgroundImageData !== data.backgroundImage) {
+                          backgroundImageData = data.backgroundImage;
+                          backgroundImageOpacity = data.backgroundOpacity || 0.5;
+                          isBackgroundImageLoaded = false;
+
+                          // 載入新的背景圖
+                          backgroundImageObj = new Image();
+                          backgroundImageObj.onload = function() {
+                              isBackgroundImageLoaded = true;
+                              redrawCanvas();
+                          };
+                          backgroundImageObj.src = backgroundImageData;
+                      } else {
+                          // 只更新透明度
+                          backgroundImageOpacity = data.backgroundOpacity || 0.5;
+                          redrawCanvas();
+                      }
+                  } else {
+                      backgroundImageData = null;
+                      backgroundImageOpacity = 0.5;
+                      backgroundImageObj = null;
+                      isBackgroundImageLoaded = false;
+                      redrawCanvas();
                   }
               });
         }
@@ -743,7 +814,45 @@
         function redrawCanvas() {
             const canvas = document.getElementById('drawing-canvas');
             if(!ctx) return;
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製背景圖
+            if (backgroundImageObj && isBackgroundImageLoaded) {
+                const imgWidth = backgroundImageObj.naturalWidth;
+                const imgHeight = backgroundImageObj.naturalHeight;
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+
+                // 計算縮放比例以最大化顯示圖片同時保持比例
+                const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
+                const scaledWidth = imgWidth * scale;
+                const scaledHeight = imgHeight * scale;
+
+                // 置中顯示
+                const x = (canvasWidth - scaledWidth) / 2;
+                const y = (canvasHeight - scaledHeight) / 2;
+
+                // 設定透明度並繪製
+                // 第一頁使用設定的透明度，其他頁面在洋蔥皮開啟時使用更低的透明度
+                let actualOpacity = backgroundImageOpacity;
+                if (currentPageIndex > 0) {
+                    if (showOnionSkin) {
+                        // 其他頁面洋蔥皮開啟時，背景圖透明度降低
+                        actualOpacity = backgroundImageOpacity * 0.3;
+                    } else {
+                        // 其他頁面洋蔥皮關閉時，不顯示背景圖
+                        actualOpacity = 0;
+                    }
+                }
+
+                if (actualOpacity > 0) {
+                    ctx.globalAlpha = actualOpacity;
+                    ctx.drawImage(backgroundImageObj, x, y, scaledWidth, scaledHeight);
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
             if (showOnionSkin && currentPageIndex > 0) drawStrokesToContext(ctx, pages[currentPageIndex - 1].strokes, canvas.width, canvas.height, 0.3, true);
             drawStrokesToContext(ctx, pages[currentPageIndex].strokes, canvas.width, canvas.height, 1.0);
         }
@@ -934,9 +1043,34 @@
         function initTeacherDashboard() {
             // 監聽 Class Control 狀態
             const controlRef = db.collection('artifacts').doc(currentAppId).collection('public').doc('data').collection('class_controls').doc(currentClassCode);
-            controlRef.onSnapshot(doc => { 
-                if(doc.exists) updateSessionBtn(doc.data().isActive); 
-                else {
+            controlRef.onSnapshot(doc => {
+                if(doc.exists) {
+                    const data = doc.data();
+                    updateSessionBtn(data.isActive);
+
+                    // 處理背景圖設定（老師端也需要載入背景圖以顯示學生作品）
+                    if (data.backgroundImage) {
+                        if (backgroundImageData !== data.backgroundImage) {
+                            backgroundImageData = data.backgroundImage;
+                            backgroundImageOpacity = data.backgroundOpacity || 0.5;
+                            isBackgroundImageLoaded = false;
+
+                            // 載入背景圖
+                            backgroundImageObj = new Image();
+                            backgroundImageObj.onload = function() {
+                                isBackgroundImageLoaded = true;
+                            };
+                            backgroundImageObj.src = backgroundImageData;
+                        } else {
+                            backgroundImageOpacity = data.backgroundOpacity || 0.5;
+                        }
+                    } else {
+                        backgroundImageData = null;
+                        backgroundImageOpacity = 0.5;
+                        backgroundImageObj = null;
+                        isBackgroundImageLoaded = false;
+                    }
+                } else {
                     updateSessionBtn(false);
                     // 若 control doc 不存在，自動建立預設值
                     controlRef.set({isActive: false});
@@ -1033,9 +1167,44 @@
         function loadReplayPage(idx) {
             replayTimeouts.forEach(t => clearTimeout(t)); replayTimeouts = [];
             document.getElementById('replay-status').innerText = "就緒";
-            const canvas = document.getElementById('replay-canvas'); const ctx = canvas.getContext('2d');
+            const canvas = document.getElementById('replay-canvas');
+            const ctx = canvas.getContext('2d');
             const pageData = currentReplayData.pages[idx];
-            const img = new Image(); img.onload = () => { canvas.width = img.naturalWidth; canvas.height = img.naturalHeight; ctx.drawImage(img, 0, 0); }; img.src = pageData.image;
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+
+                // 先清空畫布
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 如果是第一頁且有背景圖，先繪製背景圖
+                if (idx === 0 && backgroundImageObj && isBackgroundImageLoaded) {
+                    const imgWidth = backgroundImageObj.naturalWidth;
+                    const imgHeight = backgroundImageObj.naturalHeight;
+                    const canvasWidth = canvas.width;
+                    const canvasHeight = canvas.height;
+
+                    // 計算縮放比例
+                    const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
+                    const scaledWidth = imgWidth * scale;
+                    const scaledHeight = imgHeight * scale;
+
+                    // 置中顯示
+                    const x = (canvasWidth - scaledWidth) / 2;
+                    const y = (canvasHeight - scaledHeight) / 2;
+
+                    // 繪製背景圖
+                    ctx.globalAlpha = backgroundImageOpacity;
+                    ctx.drawImage(backgroundImageObj, x, y, scaledWidth, scaledHeight);
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // 繪製學生作品
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = pageData.image;
         }
         function closeReplay() { document.getElementById('modal-replay').classList.add('hidden'); replayTimeouts.forEach(t => clearTimeout(t)); }
         function updateSpeed() { replaySpeed = parseInt(document.getElementById('replay-speed').value); }
@@ -1045,9 +1214,35 @@
             if (!pageData.strokes) return;
             replayTimeouts.forEach(t => clearTimeout(t)); replayTimeouts = [];
             const strokes = JSON.parse(pageData.strokes);
-            const canvas = document.getElementById('replay-canvas'); const ctx = canvas.getContext('2d');
-            const width = canvas.width; const height = canvas.height;
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height);
+            const canvas = document.getElementById('replay-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // 清空畫布
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, width, height);
+
+            // 如果是第一頁且有背景圖，先繪製背景圖
+            if (currentReplayPageIndex === 0 && backgroundImageObj && isBackgroundImageLoaded) {
+                const imgWidth = backgroundImageObj.naturalWidth;
+                const imgHeight = backgroundImageObj.naturalHeight;
+
+                // 計算縮放比例
+                const scale = Math.min(width / imgWidth, height / imgHeight);
+                const scaledWidth = imgWidth * scale;
+                const scaledHeight = imgHeight * scale;
+
+                // 置中顯示
+                const x = (width - scaledWidth) / 2;
+                const y = (height - scaledHeight) / 2;
+
+                // 繪製背景圖
+                ctx.globalAlpha = backgroundImageOpacity;
+                ctx.drawImage(backgroundImageObj, x, y, scaledWidth, scaledHeight);
+                ctx.globalAlpha = 1.0;
+            }
+
             document.getElementById('replay-status').innerText = "播放中...";
             let globalOffset = 0;
             strokes.forEach((stroke, sIdx) => {
@@ -1117,6 +1312,148 @@
 
             } catch(e) { console.error(e); showSystemMessage("下載錯誤"); } 
             finally { btn.disabled = false; btn.innerHTML = originalText; }
+        }
+
+        // --- 10. 背景圖設定功能 ---
+        function openBackgroundImageModal() {
+            const modal = document.getElementById('modal-background-image');
+            const slider = document.getElementById('background-opacity-slider');
+            const opacityValue = document.getElementById('opacity-value');
+
+            // 更新滑桿事件
+            slider.oninput = function() {
+                opacityValue.innerText = this.value + '%';
+                updateBackgroundPreview();
+            };
+
+            // 檔案選擇事件
+            const fileInput = document.getElementById('background-image-input');
+            fileInput.onchange = handleBackgroundImageSelect;
+
+            // 重置檔案輸入
+            fileInput.value = '';
+            document.getElementById('background-preview-container').classList.add('hidden');
+
+            // 添加 Ctrl+V 貼上圖片事件
+            document.addEventListener('paste', handlePasteImage);
+
+            modal.classList.remove('hidden');
+        }
+
+        function handlePasteImage(e) {
+            const modal = document.getElementById('modal-background-image');
+            // 只在模態視窗開啟時處理貼上事件
+            if (modal.classList.contains('hidden')) return;
+
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const img = document.getElementById('background-preview-img');
+                        img.src = event.target.result;
+                        document.getElementById('background-preview-container').classList.remove('hidden');
+                        updateBackgroundPreview();
+
+                        // 顯示提示
+                        showSystemMessage('圖片已貼上', '成功');
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                    break;
+                }
+            }
+        }
+
+        function handleBackgroundImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showSystemMessage('請選擇圖片檔案');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('background-preview-img');
+                img.src = e.target.result;
+                document.getElementById('background-preview-container').classList.remove('hidden');
+                updateBackgroundPreview();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateBackgroundPreview() {
+            const img = document.getElementById('background-preview-img');
+            const slider = document.getElementById('background-opacity-slider');
+            const opacity = slider.value / 100;
+            img.style.opacity = opacity;
+        }
+
+        async function saveBackgroundImage() {
+            const previewImg = document.getElementById('background-preview-img');
+            const slider = document.getElementById('background-opacity-slider');
+
+            // 檢查是否有預覽圖片
+            if (!previewImg.src || previewImg.src === '') {
+                showSystemMessage('請先選擇或貼上圖片');
+                return;
+            }
+
+            try {
+                const base64Image = previewImg.src;
+                const opacity = slider.value / 100;
+
+                // 儲存到 Firebase class_controls
+                await db.collection('artifacts').doc(currentAppId)
+                        .collection('public').doc('data')
+                        .collection('class_controls').doc(currentClassCode)
+                        .set({
+                            backgroundImage: base64Image,
+                            backgroundOpacity: opacity
+                        }, { merge: true });
+
+                showSystemMessage('背景圖設定已儲存');
+                closeModal('modal-background-image');
+
+                // 移除貼上事件監聽
+                document.removeEventListener('paste', handlePasteImage);
+
+            } catch (e) {
+                console.error(e);
+                showSystemMessage('儲存失敗: ' + e.message);
+            }
+        }
+
+        function closeBackgroundImageModal() {
+            document.removeEventListener('paste', handlePasteImage);
+            closeModal('modal-background-image');
+        }
+
+        async function removeBackgroundImage() {
+            showConfirmationModal('確定要移除背景圖嗎？', async (yes) => {
+                if (yes) {
+                    try {
+                        await db.collection('artifacts').doc(currentAppId)
+                                .collection('public').doc('data')
+                                .collection('class_controls').doc(currentClassCode)
+                                .set({
+                                    backgroundImage: null,
+                                    backgroundOpacity: null
+                                }, { merge: true });
+
+                        showSystemMessage('背景圖已移除');
+                        closeBackgroundImageModal();
+                    } catch (e) {
+                        console.error(e);
+                        showSystemMessage('移除失敗: ' + e.message);
+                    }
+                }
+            });
         }
 
         window.onload = initApp;
