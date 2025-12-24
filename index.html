@@ -2,7 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>互動手寫板 - 多班級版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,6 +22,43 @@
             font-family: 'Noto Sans TC', sans-serif;
             background-color: #FFF8E1;
             overscroll-behavior: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            top: 0;
+            left: 0;
+        }
+        html {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        /* iOS Safari 瀏覽器工具列隱藏優化 */
+        #page-student {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        /* 確保學生端工具列固定在頂部 */
+        #page-student > div:first-child {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            min-height: 32px; /* 最小高度確保可見性 */
+        }
+        /* 防止工具列內容換行 */
+        #page-student > div:first-child > * {
+            flex-shrink: 0;
+        }
+        /* 優化小螢幕的字體渲染 */
+        @media (max-width: 768px) {
+            #page-student button,
+            #page-student span {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
         }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
@@ -50,6 +89,130 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .role-btn { aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .page-indicator { background: rgba(255, 255, 255, 0.9); border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* iPad 橫向模式優化 - 針對小高度螢幕 */
+        @media (max-height: 800px) and (orientation: landscape) {
+            #page-student > div:first-child {
+                padding: 0.375rem 0.5rem !important;
+            }
+            .canvas-container {
+                background-size: 15px 15px;
+            }
+        }
+
+        /* iPad mini 橫向和其他小螢幕優化 */
+        @media (max-height: 700px) and (orientation: landscape) {
+            #page-student > div:first-child {
+                padding: 0.25rem 0.375rem !important;
+                gap: 0.375rem !important;
+            }
+            #page-student .w-7.h-7 {
+                width: 1.5rem !important;
+                height: 1.5rem !important;
+            }
+            #page-student .w-6.h-6 {
+                width: 1.25rem !important;
+                height: 1.25rem !important;
+            }
+            #page-student .w-5.h-5 {
+                width: 1.125rem !important;
+                height: 1.125rem !important;
+            }
+            #btn-submit {
+                padding: 0.25rem 0.5rem !important;
+            }
+            #page-counter {
+                min-width: 1.5rem !important;
+                padding-left: 0.25rem !important;
+                padding-right: 0.25rem !important;
+            }
+            #bg-page-num {
+                font-size: 2.5rem !important;
+                bottom: 0.5rem !important;
+                right: 0.5rem !important;
+            }
+        }
+
+        /* 極小螢幕優化 (如iPad mini 橫向在瀏覽器工具列顯示時) */
+        @media (max-height: 600px) and (orientation: landscape) {
+            #page-student > div:first-child {
+                padding: 0.25rem !important;
+                gap: 0.25rem !important;
+            }
+            #page-student .w-7.h-7 {
+                width: 1.25rem !important;
+                height: 1.25rem !important;
+            }
+            #page-student .w-6.h-6 {
+                width: 1.125rem !important;
+                height: 1.125rem !important;
+            }
+            #page-student .w-5.h-5 {
+                width: 1rem !important;
+                height: 1rem !important;
+            }
+            #btn-submit {
+                padding: 0.25rem 0.375rem !important;
+            }
+            #btn-submit .fa-paper-plane {
+                display: none !important;
+            }
+            #page-counter {
+                min-width: 1.25rem !important;
+                padding-left: 0.125rem !important;
+                padding-right: 0.125rem !important;
+            }
+            #bg-page-num {
+                font-size: 2rem !important;
+            }
+            #student-waiting h2 {
+                font-size: 1.125rem !important;
+            }
+            #student-waiting .text-4xl {
+                font-size: 2rem !important;
+            }
+        }
+
+        /* 超小螢幕優化 (高度小於500px) */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #page-student > div:first-child {
+                padding: 0.125rem 0.25rem !important;
+                gap: 0.125rem !important;
+                min-height: 24px !important;
+            }
+            #page-student .w-7.h-7,
+            #page-student .w-6.h-6 {
+                width: 1rem !important;
+                height: 1rem !important;
+                font-size: 0.625rem !important;
+            }
+            #page-student .w-5.h-5 {
+                width: 0.875rem !important;
+                height: 0.875rem !important;
+            }
+            #student-name-display,
+            #student-class-display {
+                font-size: 0.5rem !important;
+                padding: 0.125rem 0.25rem !important;
+            }
+            #btn-submit {
+                font-size: 0.5rem !important;
+                padding: 0.125rem 0.25rem !important;
+            }
+            #page-counter {
+                font-size: 0.5rem !important;
+            }
+        }
+
+        /* 橫向模式下隱藏較不重要的元素文字，保留圖標 */
+        @media (max-height: 450px) and (orientation: landscape) {
+            #student-name-display {
+                display: none !important;
+            }
+            #student-class-display {
+                font-size: 0.5rem !important;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-700 h-screen overflow-hidden flex flex-col">
@@ -130,7 +293,7 @@
         </div>
 
         <div class="absolute bottom-6 text-center w-full px-4 text-xs text-gray-400">
-            Made by <a href="https://kentxchang.blogspot.tw" target="_blank" class="text-orange-600 hover:text-orange-700 underline">阿剛老師</a>
+            Made by <a href="https://kentxchang.blogspot.tw" target="_blank" class="text-orange-600 hover:text-orange-700 underline">阿剛老師 V1.1</a>
             <p class="mt-1">本作品依據 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh_TW" target="_blank" class="text-blue-600 hover:text-blue-700 underline">創用 CC 姓名標示-非商業性-相同方式分享 4.0 國際</a> 授權條款釋出。</p>
         </div>
     </div>
@@ -191,49 +354,55 @@
 
     <!-- 頁面：學生畫布 -->
     <div id="page-student" class="hidden h-full flex flex-col relative bg-gray-50">
-        <div class="bg-white shadow-sm p-2 flex justify-between items-center z-10">
-            <div class="flex items-center space-x-2">
-                <div class="flex flex-col leading-tight">
-                    <span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-xs font-bold w-fit mb-0.5" id="student-class-display">Class</span>
-                    <span class="font-bold text-sm text-gray-700" id="student-name-display">Name</span>
+        <!-- 單行整合工具列 -->
+        <div class="bg-white shadow-md p-1 md:p-1.5 z-10 flex items-center justify-between gap-0.5 md:gap-1 overflow-x-auto">
+            <!-- 左側：班級姓名 -->
+            <div class="flex items-center shrink-0">
+                <div class="flex flex-col leading-none">
+                    <span class="bg-blue-100 text-blue-600 px-1 py-0.5 rounded text-[0.625rem] font-bold" id="student-class-display">Class</span>
+                    <span class="font-bold text-[0.625rem] text-gray-700 mt-0.5" id="student-name-display">Name</span>
                 </div>
-                <span id="connection-status" class="text-xs text-green-500 hidden md:inline"><i class="fa-solid fa-circle"></i></span>
-            </div>
-            
-            <div class="flex items-center bg-gray-100 rounded-lg p-1 space-x-1">
-                <button onclick="changePage(-1)" class="w-10 h-10 rounded bg-white hover:bg-gray-200 flex items-center justify-center text-gray-800 shadow-sm text-xl leading-none pb-1">⬅️</button>
-                <span class="text-sm font-bold text-gray-700 px-2 min-w-[3.5rem] text-center" id="page-counter">1/1</span>
-                <button onclick="changePage(1)" class="w-10 h-10 rounded bg-white hover:bg-gray-200 flex items-center justify-center text-gray-800 shadow-sm text-xl leading-none pb-1">➡️</button>
             </div>
 
-            <div class="flex items-center space-x-2">
-                <button onclick="toggleOnionSkin()" id="btn-onion" class="text-sm px-2 py-1 rounded border border-gray-300 text-gray-400 hover:text-blue-500 hover:border-blue-400 transition"><i class="fa-regular fa-eye"></i></button>
-                <button onclick="goHome()" class="text-gray-400 px-2 hover:text-red-500"><i class="fa-solid fa-right-from-bracket"></i></button>
+            <!-- 上下頁控制 -->
+            <div class="flex items-center bg-gray-100 rounded p-0.5 gap-0.5 shrink-0">
+                <button onclick="changePage(-1)" class="w-6 h-6 md:w-7 md:h-7 rounded bg-white hover:bg-gray-200 flex items-center justify-center text-gray-800 shadow-sm text-sm leading-none">⬅️</button>
+                <span class="text-[0.625rem] md:text-xs font-bold text-gray-700 px-1 min-w-[1.75rem] text-center" id="page-counter">1/1</span>
+                <button onclick="changePage(1)" class="w-6 h-6 md:w-7 md:h-7 rounded bg-white hover:bg-gray-200 flex items-center justify-center text-gray-800 shadow-sm text-sm leading-none">➡️</button>
             </div>
+
+            <!-- 繪圖工具 -->
+            <div class="flex items-center gap-0.5 md:gap-1 shrink-0">
+                <button onclick="setPen('#333333')" class="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-800 border border-white shadow-sm shrink-0"></button>
+                <button onclick="setPen('#EF4444')" class="w-5 h-5 md:w-6 md:h-6 rounded-full bg-red-500 border border-white shadow-sm shrink-0"></button>
+                <button onclick="setPen('#3B82F6')" class="w-5 h-5 md:w-6 md:h-6 rounded-full bg-blue-500 border border-white shadow-sm shrink-0"></button>
+                <div class="w-px h-5 bg-gray-300 mx-0.5 shrink-0"></div>
+                <button onclick="toggleEraser()" id="btn-eraser" class="w-6 h-6 md:w-7 md:h-7 rounded bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 shrink-0 text-xs"><i class="fa-solid fa-eraser"></i></button>
+                <button onclick="clearCanvas()" class="w-6 h-6 md:w-7 md:h-7 rounded bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 shrink-0 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+
+            <!-- 其他功能 -->
+            <div class="flex items-center gap-0.5 md:gap-1 shrink-0">
+                <button onclick="toggleOnionSkin()" id="btn-onion" class="w-6 h-6 md:w-7 md:h-7 rounded border border-gray-300 text-gray-400 hover:text-blue-500 hover:border-blue-400 flex items-center justify-center text-xs"><i class="fa-regular fa-eye"></i></button>
+            </div>
+
+            <!-- 送出按鈕 -->
+            <button onclick="submitWork()" id="btn-submit" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 md:px-3 md:py-1.5 rounded-lg font-bold shadow-md flex items-center shrink-0 text-[0.625rem] md:text-xs whitespace-nowrap"><i class="fa-solid fa-paper-plane mr-0.5 md:mr-1"></i>送出</button>
+
+            <!-- 離開按鈕 -->
+            <button onclick="goHome()" class="text-gray-400 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center hover:text-red-500 shrink-0 text-xs md:text-sm"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
 
-        <div id="student-waiting" class="absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-center p-8 backdrop-blur-sm hidden">
-            <div class="text-6xl mb-4 text-blue-300 animate-bounce"><i class="fa-solid fa-mug-hot"></i></div>
-            <h2 class="text-2xl font-bold text-gray-600 mb-2">等待老師開始...</h2>
-            <p class="text-gray-400 mb-4">班級代碼: <span id="wait-class-code" class="font-mono bg-gray-100 px-2 py-1 rounded"></span></p>
+        <div id="student-waiting" class="absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-center p-4 md:p-8 backdrop-blur-sm hidden">
+            <div class="text-4xl md:text-6xl mb-2 md:mb-4 text-blue-300 animate-bounce"><i class="fa-solid fa-mug-hot"></i></div>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-600 mb-1 md:mb-2">等待老師開始...</h2>
+            <p class="text-sm md:text-base text-gray-400 mb-2 md:mb-4">班級代碼: <span id="wait-class-code" class="font-mono bg-gray-100 px-2 py-1 rounded"></span></p>
             <p class="text-xs text-gray-400">請稍候，活動尚未開始</p>
         </div>
 
         <div class="flex-1 relative overflow-hidden bg-white canvas-container" id="canvas-wrapper">
             <canvas id="drawing-canvas" class="absolute top-0 left-0 touch-none"></canvas>
-            <div class="absolute bottom-4 right-4 text-6xl text-gray-100 font-bold pointer-events-none select-none" id="bg-page-num">1</div>
-        </div>
-
-        <div class="bg-white p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-between items-center safe-area-bottom">
-            <div class="flex space-x-2 overflow-x-auto pb-1">
-                <button onclick="setPen('#333333')" class="w-8 h-8 rounded-full bg-gray-800 border-2 border-white shadow-sm ring-2 ring-gray-200 focus:ring-blue-400 shrink-0"></button>
-                <button onclick="setPen('#EF4444')" class="w-8 h-8 rounded-full bg-red-500 border-2 border-white shadow-sm ring-2 ring-gray-200 focus:ring-blue-400 shrink-0"></button>
-                <button onclick="setPen('#3B82F6')" class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-sm ring-2 ring-gray-200 focus:ring-blue-400 shrink-0"></button>
-                <div class="w-px h-8 bg-gray-200 mx-2 shrink-0"></div>
-                <button onclick="toggleEraser()" id="btn-eraser" class="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 shrink-0"><i class="fa-solid fa-eraser"></i></button>
-                <button onclick="clearCanvas()" class="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 shrink-0"><i class="fa-solid fa-trash-can"></i></button>
-            </div>
-            <button onclick="submitWork()" id="btn-submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-bold shadow-md flex items-center shrink-0 text-sm md:text-base"><i class="fa-solid fa-paper-plane mr-2"></i> 送出</button>
+            <div class="absolute bottom-2 md:bottom-4 right-2 md:right-4 text-4xl md:text-6xl text-gray-100 font-bold pointer-events-none select-none" id="bg-page-num">1</div>
         </div>
     </div>
 
@@ -461,6 +630,11 @@
 
         // --- 1. 初始化與設定 ---
         async function initApp() {
+            // 強制滾動到頂部，確保在iPad上從最上方開始顯示
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+
             const urlParams = new URLSearchParams(window.location.search);
             const encodedConfig = urlParams.get('config');
             if (encodedConfig) {
@@ -515,6 +689,15 @@
         function showPage(pageId) {
             document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('hidden'));
             document.getElementById(pageId).classList.remove('hidden');
+
+            // 強制滾動到頂部，特別是在iPad上切換到學生頁面時
+            if (pageId === 'page-student') {
+                setTimeout(() => {
+                    window.scrollTo(0, 0);
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
+                }, 0);
+            }
         }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function openHelpModal() { document.getElementById('modal-help').classList.remove('hidden'); }
